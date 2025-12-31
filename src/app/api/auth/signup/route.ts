@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUser, getUserByEmail } from '@/lib/db';
-import { hashPassword, setSessionCookie } from '@/lib/auth';
+import { hashPassword } from '@/lib/auth';
 import { randomUUID } from 'crypto';
 
 export async function POST(request: NextRequest) {
@@ -40,15 +40,10 @@ export async function POST(request: NextRequest) {
       password_hash: passwordHash,
     });
 
-    // Set session cookie
-    await setSessionCookie({
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-    });
-
+    // Don't set session cookie - user must log in after signup
     return NextResponse.json({
       success: true,
+      message: 'Account created successfully. Please sign in.',
       user: {
         id: user.id,
         email: user.email,

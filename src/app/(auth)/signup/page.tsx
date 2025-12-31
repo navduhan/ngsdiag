@@ -7,16 +7,17 @@ import { useAuth } from '@/components/auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { AlertCircle, UserPlus, Dna } from 'lucide-react';
+import { AlertCircle, UserPlus, Dna, CheckCircle2 } from 'lucide-react';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { signup, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // Redirect if already authenticated
@@ -41,16 +42,55 @@ export default function SignupPage() {
 
     setIsLoading(true);
 
-    const result = await signup(email, name, password);
-    
-    if (result.success) {
-      router.push('/');
-    } else {
-      setError(result.error || 'Signup failed');
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name, password }),
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setSuccess(true);
+        // Redirect to login after 2 seconds
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+      } else {
+        setError(result.error || 'Signup failed');
+      }
+    } catch {
+      setError('Network error');
     }
     
     setIsLoading(false);
   };
+
+  // Show success message
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-8 pb-8">
+            <div className="text-center">
+              <div className="mx-auto mb-4 p-3 rounded-full bg-green-100 dark:bg-green-900/30 w-fit">
+                <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Account Created!
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Your account has been created successfully.
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Redirecting to sign in...
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
