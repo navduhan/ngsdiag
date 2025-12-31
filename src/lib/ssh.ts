@@ -428,9 +428,89 @@ export async function getJobStatus(jobId: string): Promise<string> {
 
 export async function cancelJob(jobId: string): Promise<boolean> {
   try {
-    await executeCommand(`scancel ${jobId}`);
-    return true;
-  } catch {
+    const baseProjectPath = process.env.BASE_PROJECT_PATH || '';
+    let killed = false;
+    
+    // First, try to find and kill our custom PID-based job
+    const { stdout: findPid } = await executeCommand(
+      `find ${baseProjectPath} -name "ngsdiag_${jobId}.pid" 2>/dev/null | head -1`
+    );
+    
+    const pidFile = findPid.trim();
+    
+    if (pidFile) {
+      // Found our custom job
+      const { stdout: pidContent } = await executeCommand(`cat "${pidFile}" 2>/dev/null`);
+      const pid = pidContent.trim();
+      
+      if (pid) {
+        // Kill the main process and all child processes
+        console.log(`Killing process tree for PID: ${pid}`);
+        
+        // Get all child PIDs recursively and kill them
+        await executeCommand(`pkill -TERM -P ${pid} 2>/dev/null || true`);
+        
+        // Kill the main process
+        await executeCommand(`kill -TERM ${pid} 2>/dev/null || true`);
+        
+        // Wait a moment then force kill if still running
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        await executeCommand(`pkill -KILL -P ${pid} 2>/dev/null || true`);
+        await executeCommand(`kill -KILL ${pid} 2>/dev/null || true`);
+        
+        killed = true;
+      }
+      
+      // Find and cancel any SLURM jobs that were spawned by this pipeline
+      // Check the log file for SLURM job IDs
+      const logFile = pidFile.replace('.pid', '.log');
+      const { stdout: logContent } = await executeCommand(
+        `grep -oE "Submitted batch job [0-9]+" "${logFile}" 2>/dev/null | grep -oE "[0-9]+" || echo ""`
+      );
+      
+      const slurmJobIds = logContent.trim().split('\n').filter(id => id);
+      
+      for (const slurmId of slurmJobIds) {
+        console.log(`Cancelling SLURM job: ${slurmId}`);
+        await executeCommand(`scancel ${slurmId} 2>/dev/null || true`);
+        killed = true;
+      }
+      
+      // Also try to find SLURM jobs by checking squeue for jobs in the project directory
+      const projectDir = pidFile.substring(0, pidFile.lastIndexOf('/'));
+      const { stdout: squeueOutput } = await executeCommand(
+        `squeue -u $USER -o "%i %Z" 2>/dev/null | grep "${projectDir}" | awk '{print $1}' || echo ""`
+      );
+      
+      const additionalJobs = squeueOutput.trim().split('\n').filter(id => id);
+      for (const slurmId of additionalJobs) {
+        console.log(`Cancelling related SLURM job: ${slurmId}`);
+        await executeCommand(`scancel ${slurmId} 2>/dev/null || true`);
+        killed = true;
+      }
+      
+      // Write cancellation status to log
+      await executeCommand(`echo "" >> "${logFile}" 2>/dev/null || true`);
+      await executeCommand(`echo "=== JOB CANCELLED ===" >> "${logFile}" 2>/dev/null || true`);
+      await executeCommand(`echo "Cancelled at: $(date)" >> "${logFile}" 2>/dev/null || true`);
+    }
+    
+    // Also try direct scancel with the jobId (in case it's a SLURM job ID)
+    const { stderr } = await executeCommand(`scancel ${jobId} 2>&1 || true`);
+    if (!stderr.includes('Invalid job id')) {
+      killed = true;
+    }
+    
+    // Cancel all SLURM jobs from the current user that might be related
+    // by looking for jobs with "nextflow" or "nf-" in the name
+    await executeCommand(
+      `squeue -u $USER -o "%i %j" 2>/dev/null | grep -E "nextflow|nf-|ngsdiag" | awk '{print $1}' | xargs -r scancel 2>/dev/null || true`
+    );
+    
+    return killed;
+  } catch (error) {
+    console.error('Error cancelling job:', error);
     return false;
   }
 }
