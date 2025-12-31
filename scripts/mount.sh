@@ -6,8 +6,15 @@
 set -e
 
 # Load environment variables from .env.local if it exists
-if [ -f .env.local ]; then
-    export $(grep -v '^#' .env.local | xargs)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+ENV_FILE="$ROOT_DIR/.env.local"
+
+if [ -f "$ENV_FILE" ]; then
+    # Use allexport to export all variables from the sourced file
+    set -a
+    source "$ENV_FILE"
+    set +a
 fi
 
 # Colors for output
