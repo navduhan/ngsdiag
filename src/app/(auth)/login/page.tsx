@@ -31,12 +31,12 @@ export default function LoginPage() {
     const result = await login(email, password);
     
     if (result.success) {
-      router.push('/');
+      // Hard redirect to ensure AuthProvider refreshes
+      window.location.href = '/';
     } else {
       setError(result.error || 'Login failed');
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (
