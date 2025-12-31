@@ -8,13 +8,13 @@ const JWT_SECRET = new TextEncoder().encode(
 
 const COOKIE_NAME = 'ngsdiag-session';
 
-// Routes that don't require authentication
-const publicRoutes = ['/login', '/signup'];
+// Public routes that don't require authentication
+const publicRoutes = ['/login', '/signup', '/help', '/roadmap', '/about'];
 
-// API routes that don't require authentication
+// Public API routes
 const publicApiRoutes = ['/api/auth/login', '/api/auth/signup', '/api/auth/me'];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public routes
@@ -24,15 +24,6 @@ export async function middleware(request: NextRequest) {
 
   // Allow public API routes
   if (publicApiRoutes.some(route => pathname.startsWith(route))) {
-    return NextResponse.next();
-  }
-
-  // Allow static files and Next.js internals
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon') ||
-    pathname.includes('.') // Static files have extensions
-  ) {
     return NextResponse.next();
   }
 
@@ -73,8 +64,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public folder
+     * - public folder files (images, etc.)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
