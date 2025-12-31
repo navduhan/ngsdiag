@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { uploadFile, createDirectory } from '@/lib/storage';
 
+// Configure route to handle large files (up to 50GB)
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '50gb',
+    },
+    responseLimit: false,
+  },
+};
+
+// Increase max duration for large file uploads (5 minutes)
+export const maxDuration = 300;
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
