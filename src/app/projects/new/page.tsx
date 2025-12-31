@@ -8,13 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert } from '@/components/ui/alert';
-import { generateId, slugify } from '@/lib/utils';
+import { slugify } from '@/lib/utils';
 import { FolderPlus, ArrowRight, Loader2 } from 'lucide-react';
-import { Project } from '@/types';
 
 export default function NewProjectPage() {
   const router = useRouter();
-  const { addProject } = useStore();
+  const { saveProjectToDb } = useStore();
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [basePath, setBasePath] = useState<string>('');
@@ -65,18 +64,20 @@ export default function NewProjectPage() {
         throw new Error(result.error || 'Failed to create project');
       }
 
-      // Add to local store
-      const project: Project = {
-        id: generateId(),
+      // Save to database
+      const project = await saveProjectToDb({
         name: formData.name.trim(),
         path: projectPath,
         description: formData.description.trim() || undefined,
         status: 'created',
         createdAt: new Date(),
         updatedAt: new Date(),
-      };
+      });
 
-      addProject(project);
+      if (!project) {
+        throw new Error('Failed to save project to database');
+      }
+
       router.push(`/upload?project=${project.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create project');

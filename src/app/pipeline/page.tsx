@@ -11,7 +11,6 @@ import { Switch } from '@/components/ui/switch';
 import { Alert } from '@/components/ui/alert';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Spinner } from '@/components/ui/spinner';
-import { generateId } from '@/lib/utils';
 import { 
   Settings2, 
   Database, 
@@ -22,7 +21,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import Link from 'next/link';
-import { PipelineConfig, Job } from '@/types';
+import { PipelineConfig } from '@/types';
 
 // Database display names (actual paths are configured server-side via .env.local)
 const DATABASE_NAMES = {
@@ -94,7 +93,12 @@ function PipelinePageContent() {
   const router = useRouter();
   const projectId = searchParams.get('project');
   
-  const { projects, addJob, serverConfig } = useStore();
+  const { projects, saveJobToDb, fetchProjects } = useStore();
+  
+  // Fetch projects from database on mount
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
   const [selectedProjectId, setSelectedProjectId] = useState(projectId || '');
   const [config, setConfig] = useState<PipelineConfig>(defaultConfig);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -162,18 +166,20 @@ function PipelinePageContent() {
         throw new Error(result.error || 'Failed to submit job');
       }
 
-      // Create job record
-      const job: Job = {
-        id: generateId(),
+      // Save job to database
+      const job = await saveJobToDb({
         projectId: selectedProject.id,
         projectName: selectedProject.name,
         status: 'queued',
         command: 'Pipeline submitted', // Command is built server-side
         submittedAt: new Date(),
         schedulerJobId: result.jobId,
-      };
+      });
 
-      addJob(job);
+      if (!job) {
+        throw new Error('Failed to save job to database');
+      }
+
       router.push('/jobs');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit job');

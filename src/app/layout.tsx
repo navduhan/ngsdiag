@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ThemeProvider } from '@/lib/theme-provider';
+import { AuthProvider } from '@/components/auth';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import './globals.css';
@@ -25,15 +26,17 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <div className="flex-1 ml-64">
-              <Header />
-              <main className="p-6">
-                {children}
-              </main>
+          <AuthProvider>
+            <div className="flex min-h-screen">
+              <Sidebar />
+              <div className="flex-1 ml-64">
+                <Header />
+                <main className="p-6">
+                  {children}
+                </main>
+              </div>
             </div>
-          </div>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

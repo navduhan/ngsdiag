@@ -21,7 +21,12 @@ function ResultsPageContent() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get('project');
   
-  const { projects } = useStore();
+  const { projects, fetchProjects } = useStore();
+  
+  // Fetch projects from database on mount
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
   const [selectedProjectId, setSelectedProjectId] = useState(projectId || '');
   const [currentPath, setCurrentPath] = useState('');
   const [files, setFiles] = useState<FileInfo[]>([]);

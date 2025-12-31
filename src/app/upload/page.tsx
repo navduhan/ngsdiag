@@ -19,7 +19,12 @@ function UploadPageContent() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get('project');
   
-  const { projects, updateProject } = useStore();
+  const { projects, updateProject, fetchProjects } = useStore();
+  
+  // Fetch projects from database on mount
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
   const [selectedProjectId, setSelectedProjectId] = useState(projectId || '');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);

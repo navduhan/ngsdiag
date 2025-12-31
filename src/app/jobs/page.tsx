@@ -34,7 +34,12 @@ const statusConfig: Record<JobStatus, { icon: React.ReactNode; variant: 'default
 };
 
 export default function JobsPage() {
-  const { jobs, projects, updateJob, deleteJob } = useStore();
+  const { jobs, projects, updateJob, deleteJobFromDb, fetchJobs, updateJobInDb } = useStore();
+  
+  // Fetch jobs from database on mount
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -56,8 +61,8 @@ export default function JobsPage() {
       if (result.success && result.statuses) {
         Object.entries(result.statuses).forEach(([jobId, status]) => {
           const job = jobs.find(j => j.schedulerJobId === jobId);
-          if (job) {
-            updateJob(job.id, { status: status as JobStatus });
+          if (job && job.status !== status) {
+            updateJobInDb(job.id, { status: status as JobStatus });
           }
         });
       }
@@ -86,16 +91,16 @@ export default function JobsPage() {
       });
       const result = await response.json();
       
-      if (result.success) {
-        setJobLogs(result.log || 'No logs found');
-        setNextflowLogs(result.nextflowLog || '');
-        setRealTimeStatus(result.status || '');
-        
-        // Update job status if different
-        if (result.status && result.status !== job.status) {
-          updateJob(job.id, { status: result.status as JobStatus });
-        }
-      } else {
+        if (result.success) {
+          setJobLogs(result.log || 'No logs found');
+          setNextflowLogs(result.nextflowLog || '');
+          setRealTimeStatus(result.status || '');
+          
+          // Update job status if different
+          if (result.status && result.status !== job.status) {
+            updateJobInDb(job.id, { status: result.status as JobStatus });
+          }
+        } else {
         setJobLogs('Failed to fetch logs: ' + (result.error || 'Unknown error'));
       }
     } catch (err) {
@@ -115,7 +120,7 @@ export default function JobsPage() {
       const result = await response.json();
       
       if (result.success) {
-        updateJob(job.id, { status: 'cancelled' });
+        updateJobInDb(job.id, { status: 'cancelled' });
       }
     } catch (err) {
       console.error('Failed to cancel job:', err);
@@ -209,15 +214,15 @@ export default function JobsPage() {
               </Button>
             )}
             
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => deleteJob(job.id)}
-              className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-              title="Delete Job"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => deleteJobFromDb(job.id)}
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      title="Delete Job"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
           </div>
         </CardContent>
       </Card>

@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/store/useStore';
+import { useAuth } from '@/components/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +15,6 @@ import {
   Clock, 
   AlertCircle,
   ArrowRight,
-  FileSearch,
   Settings2
 } from 'lucide-react';
 
@@ -29,7 +30,14 @@ const statusVariants: Record<string, 'default' | 'success' | 'warning' | 'error'
 };
 
 export default function Dashboard() {
-  const { projects, jobs } = useStore();
+  const { projects, jobs, fetchProjects, fetchJobs } = useStore();
+  const { user } = useAuth();
+  
+  // Fetch data from database on mount
+  useEffect(() => {
+    fetchProjects();
+    fetchJobs();
+  }, [fetchProjects, fetchJobs]);
 
   const stats = {
     totalProjects: projects.length,
@@ -47,7 +55,7 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Welcome to NGSDiag
+            Welcome{user?.name ? `, ${user.name.split(' ')[0]}` : ''} to NGSDiag
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
             Metagenomic viral analysis pipeline for the Animal Disease Research and Diagnostic Laboratory

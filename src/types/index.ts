@@ -1,3 +1,17 @@
+// User types
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface AuthState {
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+}
+
 // Project types
 export interface Project {
   id: string;

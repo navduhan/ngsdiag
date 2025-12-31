@@ -42,7 +42,12 @@ interface RemoteDirectory {
 }
 
 export default function ProjectsPage() {
-  const { projects, deleteProject, addProject } = useStore();
+  const { projects, deleteProject, saveProjectToDb, fetchProjects, isLoadingProjects } = useStore();
+  
+  // Fetch projects from database on mount
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -88,6 +93,11 @@ export default function ProjectsPage() {
           throw new Error(result.error);
         }
       }
+      
+      // Delete from database
+      await fetch(`/api/user/projects?id=${projectToDelete.id}`, {
+        method: 'DELETE',
+      });
       
       deleteProject(projectToDelete.id);
       setDeleteModalOpen(false);
@@ -141,18 +151,21 @@ export default function ProjectsPage() {
     setIsImporting(true);
     
     try {
-      const project: Project = {
-        id: generateId(),
+      // Save to database
+      const project = await saveProjectToDb({
         name: dirName,
         path: dirPath,
         status: 'ready',
         createdAt: new Date(),
         updatedAt: new Date(),
-      };
+      });
       
-      addProject(project);
-      setImportModalOpen(false);
-      setManualDirName('');
+      if (project) {
+        setImportModalOpen(false);
+        setManualDirName('');
+      } else {
+        setImportError('Failed to save project to database');
+      }
     } catch (error) {
       setImportError('Failed to import project');
     } finally {
